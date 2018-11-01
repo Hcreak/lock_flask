@@ -65,9 +65,9 @@ r = redis.Redis(connection_pool=pool)
 #             return 'ok'
 #         time.sleep(0.5)
 
-@app.route('/locksignup', methods=['GET'])
+@app.route('/locksignup', methods=['POST'])
 def locksignup():
-    rdata = request.args
+    rdata = json.loads(request.data)
     lockno = rdata['lockno']
     lpassword = rdata['lpassword']
 

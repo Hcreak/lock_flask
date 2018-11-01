@@ -4,6 +4,8 @@ import qrcode
 from PIL import Image
 import os
 import requests
+import json
+import base64
 
 
 from Crypto.Cipher import AES
@@ -13,7 +15,7 @@ import shortuuid
 
 key_M = '***REMOVED***'
 key_F = '***REMOVED***'
-server_host = 'http://127.0.0.1'
+server_host = 'http://127.0.0.1:5000'
 
 
 class prpcrypt():
@@ -48,26 +50,11 @@ pc_F = prpcrypt(key_F)
 def p_qrcode(lockno):
     e_M = pc_M.encrypt(lockno)
     e_F = pc_F.encrypt(lockno)
-    print e_F, e_M
+    c_M = e_M + 'm'
+    c_F = e_F + 'f'
 
-    img_M = qrcode.make(e_M + 'm')
-    img_F = qrcode.make(e_F + 'f')
-
-    print d_qrcode(e_M + 'm')
-    print d_qrcode(e_F + 'f')
-
-    lpassword = ''
-    url = server_host + '/locksignup?lockno={}&lpassword={}'.format(lockno, lpassword)
-    req = requests.post(url)
-    if req.text == 'success':
-
-        # esp8266 spiffs
-
-        if not os.path.exists(lockno):
-            os.mkdir(lockno)
-
-        img_M.save(lockno + '/' + lockno + '_M.jpg')
-        img_F.save(lockno + '/' + lockno + '_F.jpg')
+    print c_M, c_F
+    return c_M, c_F
 
 
 def d_qrcode(code):
@@ -82,11 +69,47 @@ def d_qrcode(code):
     return 'error'
 
 
-if __name__ == '__main__':
-    newno = shortuuid.ShortUUID().random(length=11)
-    print newno
+def create_all():
+    while(True):
+        newno = shortuuid.ShortUUID().random(length=11)
+        print newno
 
-    p_qrcode(newno)
+        lockno = newno
+        lpassword = base64.b64encode(os.urandom(16))
+        lockdata = json.dumps({'mqtt_server':'172.20.0.145','lockno':lockno,'lpassword':lpassword})
+
+        headers = {'Content-Type': 'application/json'}
+        req = requests.post(url=server_host+'/locksignup', headers=headers, data=lockdata)
+        print req.text
+
+        if req.text == 'success':
+
+            if not os.path.exists(lockno):
+                os.mkdir(lockno)
+
+            # esp8266 spiffs
+            f=open(lockno + '/AuthInfo.json', 'w+')
+            f.write(lockdata)
+            f.close()
+
+
+            codes = p_qrcode(newno)
+
+            img_M = qrcode.make(codes[0])
+            img_F = qrcode.make(codes[1])
+            img_M.save(lockno + '/' + lockno + '_M.jpg')
+            img_F.save(lockno + '/' + lockno + '_F.jpg')
+
+        if req.text == 'exists':
+            continue
+
+        break
+
+
+if __name__ == '__main__':
+    create_all()
+
+
 
     # print '924810c98a233ddfbf3645ccd3ea9f14'[:-1]
 
