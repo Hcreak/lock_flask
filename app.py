@@ -155,7 +155,73 @@ def logup():
         return '0'
 
 
+@app.route('/dellog', methods=['DELETE'])
+def dellog():
+    pass
+
+
+@app.route('/gethistory', methods=['GET'])
+def gethistory():
+    lockno = request.args['lockno']
+    data = db.select("SELECT ldate,action FROM lockhistory WHERE lockno = '{}' ORDER BY ldate DESC".format(lockno))
+    return jsonify(data)
+
+
 ## MQTT PART ##
+
+def pushhistory(lockno, action):
+    db.insert("INSERT INTO lockhistory(lockno,ldate,action) VALUE ('{}','{}','{}')".format(lockno, time.time(), action))
+
+
+def topic_sys(topic_part):
+    clientid = topic_part[-2]
+    connectstatu = topic_part[-1]
+    if len(clientid) == 11 & connectstatu == 'disconnected':
+        pubtopic = '/' + clientid + '/statu'
+        mqtt.publish(pubtopic, '-2')
+
+
+def topic_common(topic_part, payload):
+    if len(topic_part[1]) == 11:
+        lockno = topic_part[1]
+        command = topic_part[2]
+        if command == 'ping':
+            topic_ping(lockno)
+        if command == 'm':
+            topic_m(lockno)
+        if command == 'f':
+            topic_f(lockno)
+
+
+def topic_ping(lockno):
+    req = requests.get('http://172.20.0.145:8080/api/v3/connections/' + lockno,
+                       auth=('42b31862dac81', 'Mjg0MjYxNDY5MDE1MDEwNDEwMDcxNTIzMzcxMDUzMjE5ODE'))
+    # print json.loads(req.text)
+    if len(json.loads(req.text)) == 0:
+        pubtopic = '/' + lockno + '/statu'
+        mqtt.publish(pubtopic, '-2')
+    else:
+        pubtopic = '/' + lockno + '/call'
+        mqtt.publish(pubtopic, 'export')
+
+
+def topic_m(lockno):
+    if r.exists(lockno + '_f'):
+        r.delete(lockno + '_f')
+        pubtopic = '/' + lockno + '/call'
+        mqtt.publish(pubtopic, 'unlock')
+    else:
+        r.set(lockno + '_m', 1, ex=35)
+
+
+def topic_f(lockno):
+    if r.exists(lockno + '_m'):
+        r.delete(lockno + '_m')
+        pubtopic = '/' + lockno + '/call'
+        mqtt.publish(pubtopic, 'unlock')
+    else:
+        r.set(lockno + '_f', 1, ex=35)
+
 
 @mqtt.on_connect()
 def handle_connect(client, userdata, flags, rc):
@@ -168,47 +234,11 @@ def handle_mqtt_message(client, userdata, message):
     topic = message.topic
     payload = message.payload.decode()
 
-    # print topic
-    # print type(topic)
-    # print topic.split('/')
     topic_part = topic.split('/')
-
     if topic_part[0] == '$SYS':
-        clientid = topic_part[-2]
-        connectstatu = topic_part[-1]
-        if len(clientid) == 11 & connectstatu == 'disconnected':
-            pubtopic = '/' + clientid + '/statu'
-            mqtt.publish(pubtopic, '-2')
-
+        topic_sys(topic_part)
     if topic_part[0] == '':
-        if len(topic_part[1]) == 11:
-            lockno = topic_part[1]
-            command = topic_part[2]
-            if command == 'ping':
-                # print 'p'
-                # req = requests.get('http://172.20.0.145:8080/api/v3/connections/' + lockno,
-                #                    auth=('42b31862dac81', 'Mjg0MjYxNDY5MDE1MDEwNDEwMDcxNTIzMzcxMDUzMjE5ODE'))
-                # print json.loads(req)
-                # if len(json.loads(req)) == 0:
-                #
-                #     pubtopic = '/' + lockno + '/statu'
-                #     mqtt.publish(pubtopic, '-2')
-                pass
-
-            if command == 'm':
-                if r.exists(lockno + '_f'):
-                    r.delete(lockno + '_f')
-                    pubtopic = '/' + lockno + '/call'
-                    mqtt.publish(pubtopic, 'unlock')
-                else:
-                    r.set(lockno + '_m', 1, ex=35)
-            if command == 'f':
-                if r.exists(lockno + '_m'):
-                    r.delete(lockno + '_m')
-                    pubtopic = '/' + lockno + '/call'
-                    mqtt.publish(pubtopic, 'unlock')
-                else:
-                    r.set(lockno + '_f', 1, ex=35)
+        topic_common(topic_part, payload)
 
 
 if __name__ == '__main__':
