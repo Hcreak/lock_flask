@@ -176,7 +176,9 @@ def pushhistory(lockno, action):
 def topic_sys(topic_part):
     clientid = topic_part[-2]
     connectstatu = topic_part[-1]
-    if len(clientid) == 11 & connectstatu == 'disconnected':
+
+    if (len(clientid) == 11) & (connectstatu == 'disconnected'):
+        print 'd'
         pubtopic = '/' + clientid + '/statu'
         mqtt.publish(pubtopic, '-2')
 
