@@ -114,7 +114,7 @@ def login():
         r.hset(mqtt_user, 'password', randompwd)
         r.hmset(mqtt_acl, {Topic_all: 1, Topic_morf: 2, Topic_ping: 2})
         r.expire(mqtt_user, 70)
-        r.expire(mqtt_user, 70)
+        r.expire(mqtt_acl, 70)  # what the fuck!
 
         return jsonify(
             {'exists': 1, 'lockno': lockno, 'morf': morf, 'adate': adate, 'key': randomkey, 'pwd': randompwd})
@@ -178,7 +178,6 @@ def topic_sys(topic_part):
     connectstatu = topic_part[-1]
 
     if (len(clientid) == 11) & (connectstatu == 'disconnected'):
-        print 'd'
         pubtopic = '/' + clientid + '/statu'
         mqtt.publish(pubtopic, '-2')
 
