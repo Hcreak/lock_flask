@@ -102,7 +102,7 @@ def login():
         print data[0]
         lockno = data[0][0]
         morf = data[0][1]
-        adate = data[0][2]
+        adate = data[0][2].strftime("%Y/%m/%d")
         randomkey = base64.b64encode(os.urandom(16))
         randompwd = base64.b64encode(os.urandom(8))
         mqtt_user = 'mqtt_user:' + randomkey
@@ -148,8 +148,7 @@ def logup():
         lockno = relust[0]
         morf = relust[1]
         db.insert(
-            "INSERT INTO user2lock(userno,lockno,morf,adate) VALUE ('{}','{}','{}','{}')".format(openid, lockno, morf,
-                                                                                                 time.time()))
+            "INSERT INTO user2lock(userno,lockno,morf,adate) VALUE ('{}','{}','{}',now())".format(openid, lockno, morf))
         return '1'
     else:
         return '0'
@@ -170,7 +169,7 @@ def gethistory():
 ## MQTT PART ##
 
 def pushhistory(lockno, action):
-    db.insert("INSERT INTO lockhistory(lockno,ldate,action) VALUE ('{}','{}','{}')".format(lockno, time.time(), action))
+    db.insert("INSERT INTO lockhistory(lockno,ldate,action) VALUE ('{}',now(),'{}')".format(lockno, action))
 
 
 def topic_sys(topic_part):
