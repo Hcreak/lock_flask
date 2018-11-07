@@ -83,6 +83,7 @@ def locksignup():
 
         r.hset(mqtt_user, 'password', lpassword)
         r.hmset(mqtt_acl, {Topic_all: 1, Topic_statu: 2, Topic_charge: 2})
+        r.hset('monitor', lockno, '-2')
 
         return 'success'
 
@@ -102,7 +103,7 @@ def login():
         print data[0]
         lockno = data[0][0]
         morf = data[0][1]
-        adate = data[0][2].strftime("%Y/%m/%d")
+        adate = data[0][2]
         randomkey = base64.b64encode(os.urandom(16))
         randompwd = base64.b64encode(os.urandom(8))
         mqtt_user = 'mqtt_user:' + randomkey
@@ -191,6 +192,26 @@ def topic_common(topic_part, payload):
             topic_m(lockno)
         if command == 'f':
             topic_f(lockno)
+        if command == 'statu':
+            topic_statu(lockno, payload)
+
+
+def topic_statu(lockno, nowstatu):
+    laststatu = r.hget('monitor', lockno)
+    if nowstatu != laststatu:
+        r.hset('monitor', lockno, nowstatu)
+        if laststatu == '-2':
+            pushhistory(lockno, '设备上线')
+            return None
+        if nowstatu == '-2':
+            pushhistory(lockno, '设备离线')
+            return None
+        if nowstatu == '1':
+            pushhistory(lockno, '上锁')
+            return None
+        if nowstatu == '0':
+            pushhistory(lockno, '开锁')
+            return None
 
 
 def topic_ping(lockno):
