@@ -173,21 +173,21 @@ def pushhistory(lockno, action):
     db.insert("INSERT INTO lockhistory(lockno,ldate,action) VALUE ('{}',now(),'{}')".format(lockno, action))
 
 
-def topic_sys(topic_part):
-    clientid = topic_part[-2]
-    connectstatu = topic_part[-1]
-
-    if (len(clientid) == 11) & (connectstatu == 'disconnected'):
-        pubtopic = '/' + clientid + '/statu'
-        mqtt.publish(pubtopic, '-2')
+# def topic_sys(topic_part):
+#     clientid = topic_part[-2]
+#     connectstatu = topic_part[-1]
+#
+#     if (len(clientid) == 11) & (connectstatu == 'disconnected'):
+#         pubtopic = '/' + clientid + '/statu'
+#         mqtt.publish(pubtopic, '-2')
 
 
 def topic_common(topic_part, payload):
     if len(topic_part[1]) == 11:
         lockno = topic_part[1]
         command = topic_part[2]
-        if command == 'ping':
-            topic_ping(lockno)
+        # if command == 'ping':
+        #     topic_ping(lockno)
         if command == 'm':
             topic_m(lockno)
         if command == 'f':
@@ -214,16 +214,16 @@ def topic_statu(lockno, nowstatu):
             return None
 
 
-def topic_ping(lockno):
-    req = requests.get('http://172.20.0.145:8080/api/v3/connections/' + lockno,
-                       auth=('42b31862dac81', 'Mjg0MjYxNDY5MDE1MDEwNDEwMDcxNTIzMzcxMDUzMjE5ODE'))
-    # print json.loads(req.text)
-    if len(json.loads(req.text)) == 0:
-        pubtopic = '/' + lockno + '/statu'
-        mqtt.publish(pubtopic, '-2')
-    else:
-        pubtopic = '/' + lockno + '/call'
-        mqtt.publish(pubtopic, 'export')
+# def topic_ping(lockno):
+#     req = requests.get('http://172.20.0.145:8080/api/v3/connections/' + lockno,
+#                        auth=('42b31862dac81', 'Mjg0MjYxNDY5MDE1MDEwNDEwMDcxNTIzMzcxMDUzMjE5ODE'))
+#     # print json.loads(req.text)
+#     if len(json.loads(req.text)) == 0:
+#         pubtopic = '/' + lockno + '/statu'
+#         mqtt.publish(pubtopic, '-2')
+#     else:
+#         pubtopic = '/' + lockno + '/call'
+#         mqtt.publish(pubtopic, 'export')
 
 
 def topic_m(lockno):
@@ -246,7 +246,7 @@ def topic_f(lockno):
 
 @mqtt.on_connect()
 def handle_connect(client, userdata, flags, rc):
-    mqtt.subscribe('$SYS/brokers/emqx@127.0.0.1/clients/#')
+    # mqtt.subscribe('$SYS/brokers/emqx@127.0.0.1/clients/#')
     mqtt.subscribe('/#')
 
 
@@ -256,10 +256,11 @@ def handle_mqtt_message(client, userdata, message):
     payload = message.payload.decode()
 
     topic_part = topic.split('/')
-    if topic_part[0] == '$SYS':
-        topic_sys(topic_part)
-    if topic_part[0] == '':
-        topic_common(topic_part, payload)
+    # if topic_part[0] == '$SYS':
+    #     topic_sys(topic_part)
+    # if topic_part[0] == '':
+    #     topic_common(topic_part, payload)
+    topic_common(topic_part, payload)
 
 
 if __name__ == '__main__':
