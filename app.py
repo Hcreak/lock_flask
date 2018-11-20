@@ -114,26 +114,26 @@ def login():
 
         r.hset(mqtt_user, 'password', randompwd)
         r.hmset(mqtt_acl, {Topic_all: 1, Topic_morf: 2, Topic_ping: 2})
-        r.expire(mqtt_user, 70)
-        r.expire(mqtt_acl, 70)  # what the fuck!
+        # r.expire(mqtt_user, 70)
+        # r.expire(mqtt_acl, 70)  # what the fuck!
 
         return jsonify(
             {'exists': 1, 'lockno': lockno, 'morf': morf, 'adate': adate, 'key': randomkey, 'pwd': randompwd})
 
 
-@app.route('/updatekey', methods=['POST'])
-def updatekey():
-    rdata = json.loads(request.data)
-    oldkey = rdata['oldkey']
-
-    mqtt_user = 'mqtt_user:' + oldkey
-    mqtt_acl = 'mqtt_acl:' + oldkey
-    if r.exists(mqtt_user):
-        r.expire(mqtt_user, 70)
-        r.expire(mqtt_acl, 70)
-        return '1'
-    else:
-        return '0'
+# @app.route('/updatekey', methods=['POST'])
+# def updatekey():
+#     rdata = json.loads(request.data)
+#     oldkey = rdata['oldkey']
+#
+#     mqtt_user = 'mqtt_user:' + oldkey
+#     mqtt_acl = 'mqtt_acl:' + oldkey
+#     if r.exists(mqtt_user):
+#         r.expire(mqtt_user, 70)
+#         r.expire(mqtt_acl, 70)
+#         return '1'
+#     else:
+#         return '0'
 
 
 @app.route('/logup', methods=['POST'])
@@ -157,7 +157,11 @@ def logup():
 
 @app.route('/dellog', methods=['DELETE'])
 def dellog():
-    pass
+    rdata = json.loads(request.data)
+    openid = getopenid(rdata['code'])
+
+    db.delete("DELETE FROM user2lock WHERE userno = '{}'".format(openid))
+    return '1'
 
 
 @app.route('/gethistory', methods=['GET'])
@@ -194,6 +198,12 @@ def topic_common(topic_part, payload):
             topic_f(lockno)
         if command == 'statu':
             topic_statu(lockno, payload)
+    else:
+        if topic_part[1] == 'unauth':
+            mqtt_user = 'mqtt_user:' + payload
+            mqtt_acl = 'mqtt_acl:' + payload
+            r.delete(mqtt_user)
+            r.delete(mqtt_acl)
 
 
 def topic_statu(lockno, nowstatu):
