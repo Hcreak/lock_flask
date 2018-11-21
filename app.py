@@ -110,10 +110,11 @@ def login():
         mqtt_acl = 'mqtt_acl:' + randomkey
         Topic_all = '/' + lockno + '/#'
         Topic_morf = '/' + lockno + '/' + morf
-        Topic_ping = '/' + lockno + '/ping'
+        # Topic_ping = '/' + lockno + '/ping'
+        Topic_unauth = '/unauth'
 
         r.hset(mqtt_user, 'password', randompwd)
-        r.hmset(mqtt_acl, {Topic_all: 1, Topic_morf: 2, Topic_ping: 2})
+        r.hmset(mqtt_acl, {Topic_all: 1, Topic_morf: 2, Topic_unauth: 2})
         # r.expire(mqtt_user, 70)
         # r.expire(mqtt_acl, 70)  # what the fuck!
 
