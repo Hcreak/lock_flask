@@ -149,9 +149,11 @@ def logup():
     if len(relust) == 2:
         lockno = relust[0]
         morf = relust[1]
-        db.insert(
-            "INSERT INTO user2lock(userno,lockno,morf,adate) VALUE ('{}','{}','{}',now())".format(openid, lockno, morf))
-        return '1'
+        if (len(db.select("SELECT * FROM user2lock WHERE lockno='{}' AND morf='{}'".format(lockno, morf))) == 0):
+            db.insert("INSERT INTO user2lock(userno,lockno,morf,adate) VALUE ('{}','{}','{}',now())".format(openid, lockno, morf))
+            return '1'
+        else:
+            return '2'
     else:
         return '0'
 
